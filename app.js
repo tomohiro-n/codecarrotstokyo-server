@@ -9,9 +9,23 @@ app.get('/', function(req, res){
 	res.sendFile(__dirname + '/index.html');
 });
 
+
 var fortuneApiUrlHost = "http://api.jugemkey.jp";
 var fortuneApiUrlPathBase = "api/horoscope/free/";
 var results = {};
+
+app.get('/tellme', function(req, res) {
+	var year = req.query.year;
+	var month = req.query.month;
+	var day = req.query.day;
+	var fortuneUrl = getFortuneUrl(year, month, day);
+	request(fortuneUrl, function(error, response, body) {
+		if (!error && response.statusCode == 200) {
+			res.header('Access-Control-Allow-Origin', '*');
+			res.send(body);
+		}
+	});
+});
 
 io.on('connection', function(socket){
 	socket.on('request', function(req){
@@ -20,8 +34,8 @@ io.on('connection', function(socket){
 		var month = req.month;
 		var day = req.day;
 		var starSign = req.starSign;
-		var fortuneUrlPath = fortuneApiUrlPathBase + year + "/" + month + "/" + day;
-		request(fortuneApiUrlHost + "/" + fortuneUrlPath, function(error, response, body) {
+		var fortuneUrl = getFortuneUrl(year, month, day);
+		request(fortuneUrl, function(error, response, body) {
 			if (!error && response.statusCode == 200) {
 				var json = JSON.parse(body);
 				var data = json.horoscope[year + "/" + month + "/" + day];
@@ -39,6 +53,11 @@ io.on('connection', function(socket){
 		});
 	});
 });
+
+var getFortuneUrl = function (year, month, day) {
+	return fortuneApiUrlHost + "/" + fortuneApiUrlPathBase + year + "/" + month + "/" + day;
+}
+
 var port = process.env.PORT || 3000;
 http.listen(port, function(){
 	console.log('listening on *:' + port);
