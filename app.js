@@ -15,14 +15,19 @@ var fortuneApiUrlPathBase = "api/horoscope/free/";
 var results = {};
 
 app.get('/tellme', function(req, res) {
+	res.header('Access-Control-Allow-Origin', '*');
 	var year = req.query.year;
 	var month = req.query.month;
 	var day = req.query.day;
+	if (!year || !month || !day) {
+		res.send({horoscope: "error, some parameters are not invalid..."});
+		return;
+	}
 	var fortuneUrl = getFortuneUrl(year, month, day);
 	request(fortuneUrl, function(error, response, body) {
 		if (!error && response.statusCode == 200) {
-			res.header('Access-Control-Allow-Origin', '*');
 			res.send(body);
+			return;
 		}
 	});
 });
@@ -35,22 +40,25 @@ io.on('connection', function(socket){
 		var day = req.day;
 		var starSign = req.starSign;
 		var fortuneUrl = getFortuneUrl(year, month, day);
-		request(fortuneUrl, function(error, response, body) {
-			if (!error && response.statusCode == 200) {
-				var json = JSON.parse(body);
-				var data = json.horoscope[year + "/" + month + "/" + day];
-				var result;
-				for (var i = 0; i < data.length; i++) {
-					if (data[i].sign == starSign) {
-						result = data[i];
+		if (name && year && month && day && starSign) {
+			request(fortuneUrl, function (error, response, body) {
+				if (!error && response.statusCode == 200) {
+					var json = JSON.parse(body);
+					if (!json || !json.horoscope) return;
+					var data = json.horoscope[year + "/" + month + "/" + day];
+					var result;
+					for (var i = 0; i < data.length; i++) {
+						if (data[i].sign == starSign) {
+							result = data[i];
+						}
+					}
+					if (result) {
+						console.log(result);
+						io.emit('result', {name: name, year: year, month: month, day: day, result: result});
 					}
 				}
-				if (result) {
-					console.log(result);
-					io.emit('result', {name: name, year: year, month: month, day: day, result: result});
-				}
-			}
-		});
+			});
+		}
 	});
 });
 
